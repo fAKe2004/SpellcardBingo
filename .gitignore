@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.pytest_cache/
+.coverage*
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+ENV/
+.env
+.env.*
+.python-version
+
+# Editors/IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project data/checkpoints
+# Keep the source CSV tracked; ignore generated checkpoints
+# If you want to ignore the CSV, uncomment the line below.
+# data/SpellcardData.csv
+data/checkpoint-*.pickle
+data/checkpoint-*.json
+
+# Logs
+*.log

@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Spellcard Bingo</title>
+  <style>
+    :root { --gap: 6px; }
+    body {
+      font-family: system-ui, sans-serif;
+      display:flex; flex-direction:column; align-items:center;
+      padding:20px;
+      min-height: 100vh;
+      /* Background image: fit by height, keep aspect ratio, center, no distortion */
+      /* background-image: url('media/background.png'); */
+      background-repeat: no-repeat;
+      background-position: center center;
+      background-size: auto 105vh; /* zoom in by ~5% (relative to viewport height) */
+      background-attachment: fixed; /* keep it steady on scroll */
+      background-color: #ffffff; /* visible on sides if image doesn't fill width */
+    }
+    h1 { margin:8px 0 16px; }
+    #board { display:grid; gap: var(--gap); }
+    /* HUD layout: 3 columns (left | center | right), 3 rows (labels, score, hp) */
+    #hud {
+      display:grid;
+      grid-template-columns: 1fr auto 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 6px 16px; /* tighter row gap to bring label and score closer */
+      align-items:center;
+      width:100%;
+      max-width: calc(8 * (72px + 6px));
+      margin-bottom: 10px;
+    }
+    #hud .left { grid-column: 1; display:flex; align-items:center; gap:8px; }
+  #hud .center { grid-column: 2; text-align:center; display:flex; align-items:center; justify-content:center; }
+    #hud .right { grid-column: 3; display:flex; align-items:center; gap:8px; }
+  #hud .team-label { font-size: 42px; font-weight: 900; justify-content:center; text-align:center; width:100%; }
+  #hud .row-label { font-size: 20px; font-weight: 800; text-transform: uppercase; color:#555; letter-spacing: 0.04em; }
+    #hud .score { justify-content:center; text-align:center; width:100%; }
+    #hud .score strong {
+      font-size: 32px; font-weight: 800;
+      background: rgba(255,255,255,0.6);
+      padding: 2px 10px; border-radius: 10px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+  #hud .hp { display:flex; justify-content:center; align-items:center; gap:8px; }
+  #hud .hp button { padding:8px 12px; font-size: 16px; }
+  #hud .hp span {
+    min-width: 32px; display:inline-block; text-align:center; font-weight:800; font-size: 20px;
+    background: rgba(255,255,255,0.6);
+    padding: 2px 8px; border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+  /* Reset button styling */
+  #reset-btn { padding:6px 12px; border-radius:10px; border:2px solid #ddd; background:#fff; font-weight:700; cursor:pointer; }
+  #reset-btn:hover { border-color:#bbb; }
+    /* larger cells for SpellCard display */
+    .cell {
+      width:72px; height:72px; display:flex; align-items:center; justify-content:center;
+      background: #f7f7f7; border-radius:6px; cursor:pointer; user-select:none; font-weight:600;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+      overflow: visible; /* allow pending outline to extend outside */
+    }
+    .cell.marked { background: #4caf50; color: white; }
+  .controls { margin: 12px 0; display:flex; gap:8px; justify-content:center; width:100%; }
+  /* Select row under HP */
+  #select-row { display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap: 8px 16px; width:100%; max-width: calc(8 * (72px + 6px)); margin-top: 4px; margin-bottom: 12px; }
+  #select-row .left { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  #select-row .right { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  #select-row .center { display:flex; align-items:center; justify-content:center; }
+  .select-label { font-size: 14px; font-weight: 700; color:#444; text-transform: uppercase; letter-spacing: 0.06em; }
+  .team-btn { min-width: 80px; padding:8px 12px; border-radius:9999px; border:2px solid #ddd; font-size:14px; font-weight:700; background:#fff; }
+  .team-btn.red.active { background:#EE5755; color:#fff; border-color:#EE5755; }
+  .team-btn.blue.active { background:#5557EE; color:#fff; border-color:#5557EE; }
+    button { padding:8px 12px; border-radius:6px; border:1px solid #ddd; cursor:pointer; }
+  button.active { border-color:#333; box-shadow: 0 0 0 2px rgba(0,0,0,0.05) inset; font-weight:700; }
+    #status { min-height:1.5em; margin-top:8px; }
+    #overlay { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.45); }
+    #overlay .panel { background:white; padding:24px; border-radius:10px; text-align:center; min-width:220px; }
+    /* On-stage emphasis for score */
+    #scores { font-size: 32px; font-weight: 800; }
+  </style>
+</head>
+<body>
+  <h1>Spellcard Bingo</h1>
+
+  <div id="hud">
+    <div class="left team-label" style="color:#EE5755">RED</div>
+    <div class="center"></div>
+    <div class="right team-label" style="color:#5557EE">BLUE</div>
+
+  <div class="left score"><strong id="score-red">0</strong></div>
+    <div class="center row-label">score</div>
+  <div class="right score"><strong id="score-blue">0</strong></div>
+
+    <div class="left hp">
+      <button id="hp-red-dec">-</button>
+      <span id="hp-red-value">--</span>
+      <button id="hp-red-inc">+</button>
+    </div>
+    <div class="center row-label">hp</div>
+    <div class="right hp">
+      <button id="hp-blue-dec">-</button>
+      <span id="hp-blue-value">--</span>
+      <button id="hp-blue-inc">+</button>
+    </div>
+  </div>
+
+  <div id="select-row">
+    <div class="left">
+      <button id="team-red" class="team-btn red">select</button>
+    </div>
+    <div class="center"><button id="reset-btn" title="Reset board and state">Reset</button></div>
+    <div class="right">
+      <button id="team-blue" class="team-btn blue">select</button>
+    </div>
+  </div>
+
+  <!-- HP controls moved into #hud -->
+
+  <div id="board" aria-live="polite"></div>
+  <div id="status" role="status"></div>
+
+  <script>
+    let N = 8;
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const cellSize = 72; // must match .cell width/height in CSS
+    const gap = 6;
+
+    let COLORS = { red: '#EE5755', blue: '#5557EE', both: '#E000E0' };
+  let SYS = { team: 'red', op: 'toggle_pending' };
+    let CARD = [];
+    let CELLS = { red: [], blue: [] };
+  let PENDING = { red: { xy: null, hp: null }, blue: { xy: null, hp: null }, max_hp: 5 };
+
+    function setActiveButtons() {
+      const redBtn = document.getElementById('team-red');
+      const blueBtn = document.getElementById('team-blue');
+      const redActive = SYS.team === 'red';
+      const blueActive = SYS.team === 'blue';
+      redBtn.classList.toggle('active', redActive);
+      blueBtn.classList.toggle('active', blueActive);
+      // Update button text to 'selected' for active team, 'select' for inactive team
+      if (redBtn) redBtn.textContent = redActive ? 'selected' : 'select';
+      if (blueBtn) blueBtn.textContent = blueActive ? 'selected' : 'select';
+    }
+
+    // Display width helper: ASCII (<=0x7F) counts as 1, any non-ASCII Unicode code point counts as 2.
+    function charUnits(ch) {
+      if (!ch) return 1;
+      const code = ch.codePointAt(0);
+      return (code !== undefined && code <= 0x7F) ? 1 : 2;
+    }
+
+    function splitTwoLinesByDisplayWidth(input, maxUnitsPerLine = 20) {
+      const chars = [];
+      for (const ch of String(input || '')) chars.push(ch);
+      const lines = [[], []];
+      let units1 = 0, units2 = 0;
+      let i = 0;
+      // fill line1
+      while (i < chars.length) {
+        const ch = chars[i];
+        const u = charUnits(ch);
+        if (units1 + u > maxUnitsPerLine) break;
+        lines[0].push(ch); units1 += u; i++;
+      }
+      // fill line2
+      while (i < chars.length) {
+        const ch = chars[i];
+        const u = charUnits(ch);
+        if (units2 + u > maxUnitsPerLine) break;
+        lines[1].push(ch); units2 += u; i++;
+      }
+      // if still remaining, add ellipsis to line2 (reserve up to 3 units for '...')
+      if (i < chars.length) {
+        // ensure we have space for '...'
+        const ellipsis = '...';
+        const ellUnits = 3; // three ASCII dots
+        while (units2 + ellUnits > maxUnitsPerLine && lines[1].length > 0) {
+          const last = lines[1].pop();
+          units2 -= charUnits(last);
+        }
+        if (units2 + ellUnits <= maxUnitsPerLine) {
+          lines[1].push(ellipsis);
+        }
+      }
+      return [lines[0].join(''), lines[1].join('')];
+    }
+
+    function toCircledNumber(n) {
+      const map = {
+        0:'⓪',1:'①',2:'②',3:'③',4:'④',5:'⑤',6:'⑥',7:'⑦',8:'⑧',9:'⑨',
+        10:'⑩',11:'⑪',12:'⑫',13:'⑬',14:'⑭',15:'⑮',16:'⑯',17:'⑰',18:'⑱',19:'⑲',20:'⑳'
+      };
+      if (Number.isFinite(n)) {
+        const k = Math.trunc(n);
+        if (k in map) return map[k];
+      }
+      return String(n);
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      boardEl.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+      boardEl.style.width = `${N * (cellSize + gap)}px`;
+      boardEl.style.gridAutoRows = `${cellSize}px`;
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          const spec = CARD[r][c];
+          const redState = CELLS.red[r][c];
+          const blueState = CELLS.blue[r][c];
+
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.r = r; cell.dataset.c = c;
+          cell.style.position = 'relative';
+
+          // background fill for CHECKED
+          let bg = '';
+          if (redState === 'checked' && blueState === 'checked') bg = COLORS.both;
+          else if (redState === 'checked') bg = COLORS.red;
+          else if (blueState === 'checked') bg = COLORS.blue;
+          if (bg) { cell.style.background = bg; cell.style.color = 'white'; }
+          else { cell.style.background = '#f7f7f7'; cell.style.color = '#000'; }
+
+          // border for PENDING
+          let borderColor = '';
+          if (redState === 'pending' && blueState === 'pending') borderColor = COLORS.both;
+          else if (redState === 'pending') borderColor = COLORS.red;
+          else if (blueState === 'pending') borderColor = COLORS.blue;
+          if (borderColor) {
+            // Split 6px into 3px inside + 3px outside for visibility beyond the cell box
+            cell.style.boxShadow = `0 0 0 3px ${borderColor} inset, 0 0 0 3px ${borderColor}`;
+          } else {
+            cell.style.boxShadow = '0 1px 0 rgba(0,0,0,0.05)';
+          }
+
+          // name (two lines by display width: ASCII=1, CJK=2). Each line max 10 units (~5 CJK), ellipsize if over.
+          const nameContainer = document.createElement('div');
+          nameContainer.style.position = 'absolute';
+          nameContainer.style.top = '6px';
+          nameContainer.style.left = '6px';
+          nameContainer.style.right = '6px';
+          nameContainer.style.textAlign = 'center';
+          nameContainer.style.lineHeight = '1.05';
+          nameContainer.style.fontSize = '12px';
+          nameContainer.style.maxHeight = '2.4em';
+          nameContainer.style.overflow = 'hidden';
+          const [nm1, nm2] = splitTwoLinesByDisplayWidth(spec.name || '', 10);
+          const line1 = document.createElement('div'); line1.textContent = nm1;
+          const line2 = document.createElement('div'); line2.textContent = nm2;
+          nameContainer.appendChild(line1); nameContainer.appendChild(line2);
+
+          // index bottom-left
+          const bottomLeft = document.createElement('div');
+          bottomLeft.style.position = 'absolute';
+          bottomLeft.style.left = '6px';
+          bottomLeft.style.bottom = '6px';
+          bottomLeft.style.display = 'flex';
+          bottomLeft.style.flexDirection = 'column';
+          bottomLeft.style.alignItems = 'flex-start';
+          bottomLeft.style.gap = '1px';
+          const idxEl = document.createElement('div');
+          idxEl.style.fontSize = '11px';
+          idxEl.textContent = spec.index;
+          bottomLeft.appendChild(idxEl);
+
+          // score bottom-right, larger, circled numbers up to 20
+          const bottomRight = document.createElement('div');
+          bottomRight.style.position = 'absolute';
+          bottomRight.style.right = '6px';
+          bottomRight.style.bottom = '6px';
+          bottomRight.style.fontSize = '16px';
+          bottomRight.style.fontWeight = '800';
+          const sVal = parseInt(spec.score, 10);
+          bottomRight.textContent = toCircledNumber(isNaN(sVal) ? spec.score : sVal);
+
+          cell.appendChild(nameContainer);
+          cell.appendChild(bottomLeft);
+          cell.appendChild(bottomRight);
+          cell.addEventListener('click', () => onCellClick(r, c));
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    async function fetchState() {
+      const res = await fetch('/state');
+      const data = await res.json();
+  N = data.N || 8;
+      COLORS = data.colors || COLORS;
+      SYS = data.sys || SYS;
+      CARD = data.card || [];
+      CELLS = data.cells || { red: [], blue: [] };
+      const scores = data.scores || { red: 0, blue: 0 };
+      document.getElementById('score-red').textContent = String(scores.red || 0);
+      document.getElementById('score-blue').textContent = String(scores.blue || 0);
+      PENDING = data.pending || PENDING;
+      setActiveButtons();
+      renderBoard();
+      updateHpUI();
+    }
+
+    async function switchTeam(team) {
+      await fetch('/switch', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ team }) });
+      await fetchState();
+    }
+
+    async function onCellClick(r, c) {
+      // Server handles semantics: pending->checked, checked->unchecked, unchecked->pending
+      await fetch('/click', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ r, c }) });
+      await fetchState();
+    }
+
+  document.getElementById('team-red').addEventListener('click', () => switchTeam('red'));
+  document.getElementById('team-blue').addEventListener('click', () => switchTeam('blue'));
+  const resetBtn = document.getElementById('reset-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', async () => {
+      await fetch('/reset', { method: 'POST' });
+      await fetchState();
+    });
+  }
+
+    function updateHpUI() {
+      const redV = document.getElementById('hp-red-value');
+      const blueV = document.getElementById('hp-blue-value');
+      const redDec = document.getElementById('hp-red-dec');
+      const redInc = document.getElementById('hp-red-inc');
+      const blueDec = document.getElementById('hp-blue-dec');
+      const blueInc = document.getElementById('hp-blue-inc');
+
+      const rHP = PENDING?.red?.hp;
+      const bHP = PENDING?.blue?.hp;
+      const MAX = PENDING?.max_hp ?? 5;
+
+      if (rHP == null) {
+        redV.textContent = '--';
+        redDec.disabled = true; redInc.disabled = true;
+      } else {
+        redV.textContent = String(rHP);
+        redDec.disabled = rHP <= 0;
+        redInc.disabled = rHP >= MAX;
+      }
+
+      if (bHP == null) {
+        blueV.textContent = '--';
+        blueDec.disabled = true; blueInc.disabled = true;
+      } else {
+        blueV.textContent = String(bHP);
+        blueDec.disabled = bHP <= 0;
+        blueInc.disabled = bHP >= MAX;
+      }
+    }
+
+    async function hpAdjust(team, delta) {
+      const res = await fetch('/hp', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ team, delta }) });
+      if (!res.ok) {
+        // no pending; ignore
+        return;
+      }
+      await fetchState();
+    }
+
+    document.getElementById('hp-red-dec').addEventListener('click', () => hpAdjust('red', -1));
+    document.getElementById('hp-red-inc').addEventListener('click', () => hpAdjust('red', +1));
+    document.getElementById('hp-blue-dec').addEventListener('click', () => hpAdjust('blue', -1));
+    document.getElementById('hp-blue-inc').addEventListener('click', () => hpAdjust('blue', +1));
+
+    // initial
+    fetchState().catch(err => { statusEl.textContent = 'Failed to load state'; console.error(err); });
+  </script>
+</body>
+</html>
