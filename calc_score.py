@@ -4,7 +4,8 @@ from defs import *
 from typing import List, Any
 
 def line_score(line_values: List[int]) -> int:
-  return sum(line_values) # modify this line to change scoring rule
+  # return sum(line_values) # modify this line to change scoring rule
+  return bingo_bonus
 
 
 def check_valid_line(line_type: LineType, index: int) -> bool:

@@ -54,6 +54,7 @@ def _card_payload() -> List[List[Dict]]:
                 "name": None if rec is None else str(rec.get('SpellcardName', '')),
                 "score": 0 if rec is None else int(rec.get('Score', 0)),
                 "index": None if rec is None else str(rec.get('CanonicalID', '')),
+                "comment": None if rec is None else str(rec.get('Comment', '')),
             })
         grid.append(row)
     return grid

@@ -249,10 +249,39 @@
           nameContainer.style.fontSize = '12px';
           nameContainer.style.maxHeight = '2.4em';
           nameContainer.style.overflow = 'hidden';
+          // Let CSS handle line folding while we still apply unit-based truncation without manual newlines
           const [nm1, nm2] = splitTwoLinesByDisplayWidth(spec.name || '', 10);
-          const line1 = document.createElement('div'); line1.textContent = nm1;
-          const line2 = document.createElement('div'); line2.textContent = nm2;
-          nameContainer.appendChild(line1); nameContainer.appendChild(line2);
+          const nameText = (nm2 ? (nm1 + ' ' + nm2) : nm1);
+          nameContainer.textContent = nameText;
+          // CSS multi-line clamp (2 lines) with automatic folding
+          nameContainer.style.whiteSpace = 'normal';
+          nameContainer.style.wordBreak = 'break-word';
+          nameContainer.style.overflowWrap = 'anywhere';
+          nameContainer.style.display = '-webkit-box';
+          nameContainer.style.webkitBoxOrient = 'vertical';
+          nameContainer.style.webkitLineClamp = '2';
+
+          // comment: placed between name and index, adaptive font size up to 0.7x of NAME font size
+          const commentContainer = document.createElement('div');
+          commentContainer.style.position = 'absolute';
+          commentContainer.style.left = '6px';
+          commentContainer.style.right = '6px';
+          commentContainer.style.top = '32px'; // move a bit higher below the name area
+          commentContainer.style.textAlign = 'center';
+          commentContainer.style.lineHeight = '1.15';
+          // Allow wrapping, no CSS truncation; we'll scale font to fit instead
+          commentContainer.style.whiteSpace = 'normal';
+          commentContainer.style.wordBreak = 'break-word';
+          commentContainer.style.overflowWrap = 'anywhere';
+          commentContainer.style.overflow = 'hidden';
+          commentContainer.style.height = '28px';
+          const commentText = String(spec.comment ?? '').trim();
+          commentContainer.textContent = commentText;
+          // Start at comfortable size (0.9 * name font size)
+          const nameFontPx = 12;
+          const defaultCommentPx = Math.floor(nameFontPx * 0.9); // ~10px
+          const minCommentPx = Math.floor(nameFontPx * 0.6); // absolute minimum guard
+          commentContainer.style.fontSize = defaultCommentPx + 'px';
 
           // index bottom-left
           const bottomLeft = document.createElement('div');
@@ -264,7 +293,7 @@
           bottomLeft.style.alignItems = 'flex-start';
           bottomLeft.style.gap = '1px';
           const idxEl = document.createElement('div');
-          idxEl.style.fontSize = '11px';
+          idxEl.style.fontSize = '10px';
           idxEl.textContent = spec.index;
           bottomLeft.appendChild(idxEl);
 
@@ -273,12 +302,25 @@
           bottomRight.style.position = 'absolute';
           bottomRight.style.right = '6px';
           bottomRight.style.bottom = '6px';
-          bottomRight.style.fontSize = '16px';
+          bottomRight.style.fontSize = '14px';
           bottomRight.style.fontWeight = '800';
           const sVal = parseInt(spec.score, 10);
           bottomRight.textContent = toCircledNumber(isNaN(sVal) ? spec.score : sVal);
 
           cell.appendChild(nameContainer);
+          if (commentText) {
+            const isChecked = !!bg;
+            commentContainer.style.color = isChecked ? '#fff' : '#333';
+            cell.appendChild(commentContainer);
+
+            // Adjust comment font size based on string length heuristic
+            if (commentText.length > 0) {
+              const k = 100; // Tuned experimentally
+              const heuristicSize = k / commentText.length;
+              const finalSize = Math.max(minCommentPx, Math.min(defaultCommentPx, heuristicSize));
+              commentContainer.style.fontSize = finalSize + 'px';
+            }
+          }
           cell.appendChild(bottomLeft);
           cell.appendChild(bottomRight);
           cell.addEventListener('click', () => onCellClick(r, c));

@@ -33,5 +33,12 @@ CellStateDict = Dict[Coord, CellState]  # Mapping from (row, col) to CellState
 # Global Constant
 max_hp = 5 # initial challenge times for each spell card
 
+privileged_spellcard_ids = [
+  364 # 弑神炮麻将山
+] # global ids
+
+bingo_bonus = 15
+
+
 target_spellcard_data_path = "data/SpellcardData.csv"
 target_checkpoint_path = "data/checkpoint-{id}.pickle"

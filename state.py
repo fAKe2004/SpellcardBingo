@@ -1,12 +1,12 @@
 from defs import (
   target_spellcard_data_path, target_checkpoint_path, 
   CellStateDict, CellState, Team, Coord, OpType,
-  N, max_hp
+  N, max_hp, privileged_spellcard_ids
 )
 import pandas as pd
 import pickle
 import os
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 # global state var
 ## in state_dict
@@ -82,8 +82,11 @@ def init_state(reset: bool = False):
   else:
     init_team_cell_state_dict()
     init_team_hp_dict()
-    if len(spellcard_id_map) == 0:
-      sample_spellcard() # init_spellcard_id_map
+    # if len(spellcard_id_map) == 0:
+    #   sample_spellcard() # init_spellcard_id_map
+    
+    # always resample spellcards on reset
+    sample_spellcard() # init_spellcard_id_map
     
   init_spellcard_score_map()
     
@@ -97,7 +100,7 @@ def init_state(reset: bool = False):
   print("<< init state")
   
   
-  
+
 
 def load_spellcard_data():
   df = pd.read_csv(target_spellcard_data_path)
@@ -118,9 +121,16 @@ def load_spellcard_data():
     print("......")
     print("================================================================")
     df = df.dropna(subset=['Score'])
+    
+  # fill comment nan to ''
+  df['Comment'] = df['Comment'].fillna('')
   
   # if LocalID is NaN, replace to 0
   df['LocalID'] = df['LocalID'].fillna(0)
+
+  # Cast IDs to int
+  for col in ['LocalID', 'GlobalID']:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
 
   # format 'CanonicalID' to "{SeriesID}-{LocalID}"
   # if LocalID is 0, format it to "{SeriesID}-NonSpell" or "{SeriesID}-NS"
@@ -154,10 +164,29 @@ def sample_spellcard():
   total_spellcards = len(spellcard_data)
   import random
   sampled_indices = random.sample(range(total_spellcards), N * N)
+  sampled_indices = inject_privileged_spellcard(
+    sampled_indices,
+    privileged_spellcard_ids
+  )
   spellcard_id_map = {
     (i, j): sampled_indices[i * N + j] for i in range(N) for j in range(N)
   }
   
+def inject_privileged_spellcard(sampled_indices: List[int], privileged_spellcard_ids: List[int]):  
+  import random
+  positions = random.sample(range(N * N), len(privileged_spellcard_ids))
+  for pos, sc_global_id in zip(positions, privileged_spellcard_ids):
+    # seek by GlobalID in spellcard_data
+    sc_ids = spellcard_data.index[spellcard_data['GlobalID'] == sc_global_id].tolist()
+    if len(sc_ids) != 1:
+      raise RuntimeError(f"privileged spellcard with global id {sc_global_id} not found or not unique. len={len(sc_ids)}")
+    
+    sc_id = sc_ids[0]
+    if sc_id not in sampled_indices:
+      sampled_indices[pos] = sc_id
+  return sampled_indices
+
+
 def init_spellcard_score_map():
   global spellcard_score_map
   spellcard_score_map = {
@@ -174,7 +203,8 @@ def get_spellcard(xy: Coord):
   return {
     "name": sc_data['SpellcardName'],
     "score": sc_data['Score'],
-    "index": sc_data['CanonicalID']
+    "index": sc_data['CanonicalID'],
+    "comment": sc_data['Comment']
   }
   
 def get_cell_state(team: Team, xy: Coord) -> CellState:
