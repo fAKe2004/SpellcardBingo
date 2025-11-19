@@ -175,6 +175,8 @@ def sample_spellcard():
 def inject_privileged_spellcard(sampled_indices: List[int], privileged_spellcard_ids: List[int]):  
   import random
   positions = random.sample(range(N * N), len(privileged_spellcard_ids))
+  to_evict = [sampled_indices[pos] for pos in positions]
+  
   for pos, sc_global_id in zip(positions, privileged_spellcard_ids):
     # seek by GlobalID in spellcard_data
     sc_ids = spellcard_data.index[spellcard_data['GlobalID'] == sc_global_id].tolist()
@@ -182,7 +184,8 @@ def inject_privileged_spellcard(sampled_indices: List[int], privileged_spellcard
       raise RuntimeError(f"privileged spellcard with global id {sc_global_id} not found or not unique. len={len(sc_ids)}")
     
     sc_id = sc_ids[0]
-    if sc_id not in sampled_indices:
+    if sc_id not in sampled_indices or \
+       sc_id in to_evict:
       sampled_indices[pos] = sc_id
   return sampled_indices
 
