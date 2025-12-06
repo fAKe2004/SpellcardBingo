@@ -76,6 +76,7 @@ def init_state(reset: bool = False):
     load_spellcard_data()
   except Exception as e:
     print(f"Error loading spellcard data\n what: \n{e}")
+    raise e
   
   if not reset and try_load_latest_checkpoint():
     pass
@@ -129,13 +130,15 @@ def load_spellcard_data():
   df['LocalID'] = df['LocalID'].fillna(0)
 
   # Cast IDs to int
-  for col in ['LocalID', 'GlobalID']:
+  # for col in ['LocalID', 'GlobalID']:
+  for col in ['GlobalID']:
     df[col] = pd.to_numeric(df[col], errors='coerce')
 
   # format 'CanonicalID' to "{SeriesID}-{LocalID}"
   # if LocalID is 0, format it to "{SeriesID}-NonSpell" or "{SeriesID}-NS"
+  # Note: some LocalID is now 6A/6B, indicating the stage, so use str instead. NS is deprecated.
   df['CanonicalID'] = df.apply(
-    lambda row: f"{row['SeriesID']}-{int(row['LocalID']):02d}" 
+    lambda row: f"{row['SeriesID']}-{row['LocalID']}" 
                 if row['LocalID'] != 0 else 
                 f"{row['SeriesID']}-ns",
     axis=1

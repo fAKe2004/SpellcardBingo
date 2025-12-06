@@ -24,7 +24,7 @@
     /* HUD layout: 3 columns (left | center | right), 3 rows (labels, score, hp) */
     #hud {
       display:grid;
-      grid-template-columns: 1fr auto 1fr;
+      grid-template-columns: 1fr 80px 1fr;
       grid-template-rows: auto auto auto;
       gap: 6px 16px; /* tighter row gap to bring label and score closer */
       align-items:center;
@@ -32,6 +32,7 @@
       max-width: calc(8 * (72px + 6px));
       margin-bottom: 10px;
     }
+
     #hud .left { grid-column: 1; display:flex; align-items:center; gap:8px; }
   #hud .center { grid-column: 2; text-align:center; display:flex; align-items:center; justify-content:center; }
     #hud .right { grid-column: 3; display:flex; align-items:center; gap:8px; }
@@ -65,8 +66,9 @@
     .cell.marked { background: #4caf50; color: white; }
   .controls { margin: 12px 0; display:flex; gap:8px; justify-content:center; width:100%; }
   /* Select row under HP */
-  #select-row { display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap: 8px 16px; width:100%; max-width: calc(8 * (72px + 6px)); margin-top: 4px; margin-bottom: 12px; }
+  #select-row { display:grid; grid-template-columns: 1fr 80px 1fr; align-items:center; gap: 8px 16px; width:100%; max-width: calc(8 * (72px + 6px)); margin-top: 4px; margin-bottom: 12px; }
   #select-row .left { display:flex; flex-direction:column; align-items:center; gap:6px; }
+
   #select-row .right { display:flex; flex-direction:column; align-items:center; gap:6px; }
   #select-row .center { display:flex; align-items:center; justify-content:center; }
   .select-label { font-size: 14px; font-weight: 700; color:#444; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -341,9 +343,16 @@
       document.getElementById('score-red').textContent = String(scores.red || 0);
       document.getElementById('score-blue').textContent = String(scores.blue || 0);
       PENDING = data.pending || PENDING;
+
+      const resetBtn = document.getElementById('reset-btn');
+      if (resetBtn) {
+        resetBtn.style.display = data.show_reset_button ? 'inline-block' : 'none';
+      }
+
       setActiveButtons();
       renderBoard();
       updateHpUI();
+
     }
 
     async function switchTeam(team) {

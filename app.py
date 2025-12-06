@@ -12,7 +12,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from typing import Dict, List, Tuple
 import os
 
-from defs import N, Team, CellState, OpType, color_mapping, max_hp
+from defs import N, Team, CellState, OpType, color_mapping, max_hp, show_reset_button
 import state as S
 import calc_score as CS
 
@@ -111,6 +111,7 @@ def _state_payload() -> Dict:
         "colors": {"red": color_mapping[Team.RED], "blue": color_mapping[Team.BLUE], "both": color_mapping["both"]},
         "scores": _scores_payload(),
         "pending": _pending_payload(),
+        "show_reset_button": show_reset_button,
     }
 
 
@@ -215,6 +216,9 @@ def api_hp():
 
 @app.route("/reset", methods=["POST"])
 def api_reset():
+    if not show_reset_button:
+        return jsonify({"error": "Reset button disabled"}), 403
+    
     """Re-initialize game state (data reload, new board, reset states)."""
     print("-- reset {}")
     try:
