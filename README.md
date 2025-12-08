@@ -1,12 +1,52 @@
 # Spellcard Bingo!
 
-This is the UI of `Spellcard Bingo` game for SJTU Touhou Festival 2025.
-
-The game is inspired by [th-bingo](https://github.com/CuteReimu/th-bingo).
+This repository contains the UI for the Spellcard Bingo game used at the SJTU Touhou Festival 2025.
 
 ---
 
-## Manual
+## Credits
+
+- This project is inspired by [th-bingo](https://github.com/CuteReimu/th-bingo).
+
+- 落星, 带鸽子 @ SJTU
+	- Project proposal
+	- Spellcard data collection and scoring
+- fAKe @ SJTU
+	- Core code design and implement.
+- Copilot 様 
+	- GPT-5@OpenAI and Gemini 3.0 Pro@Google
+	- Frontend coding and refinement.
+
+> You're welcome to adapt this project for your Touhou events. Please credit us as “上海交通大学东方社”.
+
+> You don't need our prior permission to use it, though we'd love to hear about your usage.
+
+---
+
+## Contact
+
+1. For technical questions (improvements, deployment issues, etc.), email to [fake@sjtu.edu.cn](mailto:fake@sjtu.edu.cn), or open an issue/pull request in this repository.
+
+2. If you adapt this project for your own Touhou event, feel free to let us know by contacting the administrators in any of our club's QQ groups (e.g., `471319153` for vistors).
+
+---
+
+# Manual
+
+---
+
+## Game Rules
+
+Two teams compete to gain higher scores, where each team member can challenge a limited number of spellcards. (Two teams may challenge and acquire same spellcard.)
+
+Spellcards are classified into different difficulty levels and assigned scores accordingly. Each bingo (row, column, diagonal) grants a bonus.
+
+For a recording example, watch [this video](https://www.bilibili.com/video/BV1gQ2rBQEDC/?t=2610) (starts at ~43:30).
+
+
+---
+
+## Deployment
 
 ### Quick start
 
@@ -53,15 +93,42 @@ For the currently selected team, cell clicks cycle through these states:
 
 ### Resetting the game
 
-Click “Reset” to reinitialize everything
+Click “Reset” to reinitialize everything.
 
 ### Scoring
 
 - Per‑cell scores come from the data file and are shown in the bottom‑right of each cell.
-- Team totals are calculated on the server (see `calc_score.py`) from sum of checked cells and bingo bouns.
+- Team totals are calculated on the server (see `calc_score.py`) from the sum of checked cells and bingo bonus.
 
 ### Persistence and resume
 
 - On startup, the server will start fresh by default. Use `--resume` to restore from the latest available checkpoint.
 - On shutdown, the server saves a checkpoint containing board layout, per‑team cell states, and HP.
 - Checkpoints are written as pickle files to `data/checkpoint-{id}.pickle` and the latest is loaded when resuming.
+
+---
+
+## Configurable Settings
+
+> defs.py
+
+1. `N`: size of the grid
+2. `max_hp`: per spellcard+team HP
+3. `privileged_spellcard_ids`: special spellcards that are guaranteed to sample.
+4. `show_reset_btn`: whether to show the Reset button on the frontend (hide to avoid accidental clicks).
+
+> calc.py
+1. `def line_score(line_values: List[int]) -> int`: how bingo bonus is calculated.
+
+---
+
+## UI details
+
+- Cell name rendering: two-line clamp with a display-width heuristic (ASCII ≈ 1 unit, CJK ≈ 2 units) to keep names readable within 72×72 cells.
+- Comment rendering: font size adapts heuristically based on length so most comments fit within a ~28px tall area below the name; color flips to white when the cell is checked for contrast.
+- Pending state outline: visible border in the active team color, extending slightly outside the cell box for stage visibility.
+- Score: circled numerals at bottom-right for scores up to 20; larger scores fall back to plain text.
+- Layout: the “select” buttons are aligned directly below their respective team columns; the center column keeps a fixed width so alignment remains stable whether the Reset button is visible or hidden.
+
+---
+
