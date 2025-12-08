@@ -98,7 +98,7 @@ Click “Reset” to reinitialize everything.
 ### Scoring
 
 - Per‑cell scores come from the data file and are shown in the bottom‑right of each cell.
-- Team totals are calculated on the server (see `calc_score.py`) from the sum of checked cells and bingo bonus.
+- Team totals are calculated on the server (see `calc.py`) from the sum of checked cells and bingo bonus.
 
 ### Persistence and resume
 
