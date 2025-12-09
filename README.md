@@ -98,7 +98,7 @@ Click “Reset” to reinitialize everything.
 ### Scoring
 
 - Per‑cell scores come from the data file and are shown in the bottom‑right of each cell.
-- Team totals are calculated on the server (see `calc.py`) from the sum of checked cells and bingo bonus.
+- Team totals are calculated on the server (see `calc_score.py`) from the sum of checked cells and bingo bonus.
 
 ### Persistence and resume
 
@@ -117,7 +117,7 @@ Click “Reset” to reinitialize everything.
 3. `privileged_spellcard_ids`: special spellcards that are guaranteed to sample.
 4. `show_reset_btn`: whether to show the Reset button on the frontend (hide to avoid accidental clicks).
 
-> calc.py
+> calc_score.py
 1. `def line_score(line_values: List[int]) -> int`: how bingo bonus is calculated.
 
 ---
